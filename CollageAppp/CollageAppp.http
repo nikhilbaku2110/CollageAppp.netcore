@@ -1,0 +1,6 @@
+@CollageAppp_HostAddress = http://localhost:5044
+
+GET {{CollageAppp_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
