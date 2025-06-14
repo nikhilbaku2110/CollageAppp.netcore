@@ -1,4 +1,6 @@
-﻿using CollageAppp.MyLogging;
+﻿using CollageAppp.Data;
+using CollageAppp.MyLogging;
+using Microsoft.EntityFrameworkCore;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -18,6 +20,13 @@ builder.Logging.AddLog4Net();
 ////use serilog along with built in loggers
 //builder.Logging.AddSerilog();
 #endregion
+
+builder.Services.AddDbContext<CollageDBContext>(options =>
+{
+    options.UseSqlServer(builder.Configuration.GetConnectionString("CollageAppDBConnection"));
+});
+
+
 
 // Add services to the container.
 

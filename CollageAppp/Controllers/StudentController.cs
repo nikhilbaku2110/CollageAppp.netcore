@@ -1,7 +1,9 @@
-﻿using CollageAppp.Models;
+﻿using CollageAppp.Data;
+using CollageAppp.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace CollageAppp.Controllers
 {
@@ -10,9 +12,11 @@ namespace CollageAppp.Controllers
     public class StudentController : ControllerBase
     {
         private readonly ILogger<StudentController> _logger;
-        public StudentController(ILogger<StudentController> logger)
+        private readonly CollageDBContext _dbcontext;
+        public StudentController(ILogger<StudentController> logger, CollageDBContext dbcontext)
         {
             _logger = logger;
+            _dbcontext = dbcontext;
         }
 
         [HttpGet("all")]
@@ -22,20 +26,21 @@ namespace CollageAppp.Controllers
         public ActionResult<IEnumerable<StudentDTO>> GetStudents()
         {
             _logger.LogInformation("getstudents method started");
-            var students = CollageRepository.Students.Select(s => new StudentDTO()
+            var students = _dbcontext.Students.Select(s => new StudentDTO()
             {
                 Id = s.Id,
                 StudentName = s.StudentName,
                 Email = s.Email,
-                Address = s.Address
+                Address = s.Address,
+                DOB = s.DOB
               
-            });
+            }).ToList();
 
             //ok - 200 - success
-            return Ok(CollageRepository.Students);
+            return Ok(_dbcontext.Students);
         }
 
-        [HttpGet("{id:int}")]
+        [HttpGet("{id:int}",Name = "GetStudentById")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -49,7 +54,7 @@ namespace CollageAppp.Controllers
                 return BadRequest();
             }
             //not found - 404 - client error
-            var student = CollageRepository.Students.Where(n => n.Id == id).FirstOrDefault();
+            var student = _dbcontext.Students.Where(n => n.Id == id).FirstOrDefault();
             if (student == null)
             {
                 _logger.LogError("student not found giving this id");
@@ -81,7 +86,7 @@ namespace CollageAppp.Controllers
                return BadRequest();
 
             //not found - 404 - client error
-            var student = CollageRepository.Students.Where(n => n.StudentName == name).FirstOrDefault();
+            var student = _dbcontext.Students.Where(n => n.StudentName == name).FirstOrDefault();
             if (student == null)
                return NotFound("the student with id is not found");
 
@@ -112,17 +117,15 @@ namespace CollageAppp.Controllers
               return BadRequest();
 
 
-            int newid = CollageRepository.Students.LastOrDefault().Id + 1;
             Student student = new Student
             {
-                Id = newid,
                 StudentName = model.StudentName,    
                 Email = model.Email,
                 Address = model.Address,
             };
 
-            CollageRepository.Students.Add(student);
-            
+            _dbcontext.Students.Add(student);
+            _dbcontext.SaveChanges();
             model.Id = student.Id;
             //status - 201  
             return CreatedAtRoute("GetStudentById", new { id = model.Id }, model);
@@ -141,7 +144,7 @@ namespace CollageAppp.Controllers
             if (model == null || model.Id <= 0)
                  BadRequest();
 
-            var existingStudent = CollageRepository.Students.Where(s => s.Id == model.Id).FirstOrDefault();
+            var existingStudent = _dbcontext.Students.Where(s => s.Id == model.Id).FirstOrDefault();
 
             if(existingStudent == null)
                 return NotFound();
@@ -149,7 +152,7 @@ namespace CollageAppp.Controllers
             existingStudent.StudentName = model.StudentName;
             existingStudent.Email = model.Email;
             existingStudent.Address = model.Address;
-
+            _dbcontext.SaveChanges();
             return NoContent();
         }
 
@@ -167,7 +170,7 @@ namespace CollageAppp.Controllers
             if (patchDocument == null || id <= 0)
                 BadRequest();
 
-            var existingStudent = CollageRepository.Students.Where(s => s.Id == id).FirstOrDefault();
+            var existingStudent = _dbcontext.Students.Where(s => s.Id == id).FirstOrDefault();
 
             if (existingStudent == null)
                 return NotFound();
@@ -189,6 +192,7 @@ namespace CollageAppp.Controllers
             existingStudent.StudentName = studentDTO.StudentName;
             existingStudent.Email = studentDTO.Email;
             existingStudent.Address = studentDTO    .Address;
+            _dbcontext.SaveChanges();
 
             //204 - nocontent
             return NoContent();
@@ -208,12 +212,12 @@ namespace CollageAppp.Controllers
                 return BadRequest();
 
             //not found - 404 - client error
-            var student = CollageRepository.Students.Where(n => n.Id == id).FirstOrDefault();
+            var student = _dbcontext.Students.Where(n => n.Id == id).FirstOrDefault();
             if (student == null)
                 return NotFound("the student with id is not found");
 
-            CollageRepository.Students.Remove(student); 
-
+            _dbcontext.Students.Remove(student);
+            _dbcontext.SaveChanges();
             //ok - 200 - success
             return Ok(true);
 
